@@ -7,13 +7,9 @@
   <style>
     :root{
       --bg:#0b0f17;
-      --panel:#121a2a;
-      --panel2:#0f1626;
       --text:#e8eefc;
       --muted:#9fb0d0;
-      --line:#24314d;
       --accent:#6aa7ff;
-      --danger:#ff6a6a;
       --ok:#64d39a;
       --warn:#ffcf6a;
       --shadow: 0 18px 50px rgba(0,0,0,.35);
@@ -28,30 +24,10 @@
       background: radial-gradient(1200px 600px at 20% 0%, #142041 0%, var(--bg) 55%) fixed;
       color: var(--text);
     }
-    .wrap{
-      max-width: 980px;
-      margin: 28px auto;
-      padding: 0 16px 40px;
-    }
-    header{
-      display:flex;
-      align-items:flex-end;
-      justify-content:space-between;
-      gap:16px;
-      margin-bottom: 18px;
-    }
-    h1{
-      font-size: 20px;
-      margin:0;
-      letter-spacing:.2px;
-    }
-    .sub{
-      margin: 6px 0 0;
-      color: var(--muted);
-      font-size: 13px;
-      line-height: 1.35;
-      max-width: 760px;
-    }
+    .wrap{ max-width: 980px; margin: 28px auto; padding: 0 16px 40px; }
+    header{ display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom: 18px; }
+    h1{ font-size: 20px; margin:0; letter-spacing:.2px; }
+    .sub{ margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.35; max-width: 760px; }
     .card{
       background: linear-gradient(180deg, rgba(255,255,255,.04), rgba(255,255,255,.02));
       border: 1px solid rgba(255,255,255,.06);
@@ -59,16 +35,8 @@
       border-radius: var(--radius);
       overflow:hidden;
     }
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 14px;
-      padding: 16px;
-    }
-    @media (max-width: 820px){
-      .grid{ grid-template-columns: 1fr; }
-      header{ flex-direction:column; align-items:flex-start; }
-    }
+    .grid{ display:grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 16px; }
+    @media (max-width: 820px){ .grid{ grid-template-columns: 1fr; } header{ flex-direction:column; align-items:flex-start; } }
     .section{
       background: rgba(0,0,0,.14);
       border: 1px solid rgba(255,255,255,.06);
@@ -76,27 +44,12 @@
       padding: 14px;
     }
     .section h2{
-      font-size: 13px;
-      margin:0 0 10px;
-      color: var(--muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing:.08em;
+      font-size: 13px; margin:0 0 10px; color: var(--muted);
+      font-weight: 600; text-transform: uppercase; letter-spacing:.08em;
     }
-    label{
-      display:block;
-      font-size: 12px;
-      color: var(--muted);
-      margin: 10px 0 6px;
-    }
-    .row{
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-    }
-    @media (max-width: 520px){
-      .row{ grid-template-columns:1fr; }
-    }
+    label{ display:block; font-size: 12px; color: var(--muted); margin: 10px 0 6px; }
+    .row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    @media (max-width: 520px){ .row{ grid-template-columns:1fr; } }
     input, select, button{
       width:100%;
       padding: 11px 12px;
@@ -112,11 +65,7 @@
       border-color: rgba(106,167,255,.55);
       box-shadow: 0 0 0 3px rgba(106,167,255,.15);
     }
-    .btnbar{
-      display:flex;
-      gap: 10px;
-      margin-top: 12px;
-    }
+    .btnbar{ display:flex; gap: 10px; margin-top: 12px; }
     button{
       cursor:pointer;
       font-weight: 650;
@@ -130,9 +79,7 @@
       font-weight: 600;
     }
     .pill{
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
+      display:inline-flex; align-items:center; gap:8px;
       padding: 8px 10px;
       border: 1px solid rgba(255,255,255,.10);
       background: rgba(0,0,0,.18);
@@ -141,19 +88,8 @@
       font-size: 12px;
       white-space: nowrap;
     }
-    .pill strong{
-      color: var(--text);
-      font-family: var(--mono);
-      font-size: 12px;
-      font-weight: 700;
-    }
-    .meta{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      align-items:center;
-      justify-content:flex-end;
-    }
+    .pill strong{ color: var(--text); font-family: var(--mono); font-size: 12px; font-weight: 700; }
+    .meta{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; justify-content:flex-end; }
     .status{
       padding: 10px 12px;
       border-radius: 12px;
@@ -165,7 +101,6 @@
     }
     .status.ok{ border-color: rgba(100,211,154,.35); }
     .status.warn{ border-color: rgba(255,207,106,.35); }
-    .status.bad{ border-color: rgba(255,106,106,.35); }
     .mono{ font-family: var(--mono); }
     .results{
       padding: 16px;
@@ -186,25 +121,11 @@
       vertical-align: top;
     }
     tr:last-child td{ border-bottom:none; }
-    td:first-child{
-      color: var(--muted);
-      width: 42%;
-    }
-    .right{
-      text-align:right;
-      font-family: var(--mono);
-    }
-    .foot{
-      margin-top: 10px;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.35;
-    }
-    .small{
-      font-size: 12px;
-      color: var(--muted);
-      margin-top: 6px;
-    }
+    td:first-child{ color: var(--muted); width: 42%; }
+    .right{ text-align:right; font-family: var(--mono); }
+    .foot{ margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.35; }
+    .small{ font-size: 12px; color: var(--muted); margin-top: 6px; }
+    .hide{ display:none !important; }
   </style>
 </head>
 
@@ -221,6 +142,7 @@
       <div class="meta">
         <span class="pill">Pair: <strong id="pairOut">EURUSD</strong></span>
         <span class="pill">Pip: <strong id="pipOut">0.0001</strong></span>
+        <span class="pill">Stop (pips): <strong id="stopPipsLive">—</strong></span>
       </div>
     </header>
 
@@ -240,8 +162,36 @@
             <option value="NZDUSD">NZDUSD</option>
           </select>
 
-          <label for="price">Current Price (manual)</label>
+          <label for="price">Current Price (Entry Price)</label>
           <input id="price" type="number" min="0" step="0.00001" placeholder="e.g., 1.08540 (or 156.320 for JPY pairs)" />
+
+          <label for="stopMode">Stop Loss Input Mode</label>
+          <select id="stopMode">
+            <option value="pips">Stop in pips</option>
+            <option value="price">Stop at a specific price</option>
+          </select>
+
+          <div class="row" id="rowStopPips">
+            <div>
+              <label for="stopPips">Stop-Loss (pips)</label>
+              <input id="stopPips" type="number" min="0" step="0.1" placeholder="10" />
+            </div>
+            <div>
+              <label>Computed Stop (pips)</label>
+              <input id="stopPipsComputedA" type="text" disabled value="—" />
+            </div>
+          </div>
+
+          <div class="row hide" id="rowStopPrice">
+            <div>
+              <label for="stopPrice">Stop Price</label>
+              <input id="stopPrice" type="number" min="0" step="0.00001" placeholder="e.g., 1.08440" />
+            </div>
+            <div>
+              <label>Computed Stop (pips)</label>
+              <input id="stopPipsComputedB" type="text" disabled value="—" />
+            </div>
+          </div>
 
           <div class="row">
             <div>
@@ -260,8 +210,8 @@
               <input id="leverage" type="number" min="1" step="1" placeholder="30" />
             </div>
             <div>
-              <label for="stopPips">Stop-Loss (pips)</label>
-              <input id="stopPips" type="number" min="0" step="0.1" placeholder="10" />
+              <label>&nbsp;</label>
+              <input type="text" disabled value=" " />
             </div>
           </div>
 
@@ -270,7 +220,9 @@
             <button class="secondary" id="btnReset">Reset</button>
           </div>
 
-          <div class="small">Tip: For USDJPY, a 10 pip stop = 0.10 JPY (because pip size is 0.01).</div>
+          <div class="small">
+            If you choose “Stop at price,” the calculator uses: <span class="mono">abs(entry - stop) ÷ pipSize</span>.
+          </div>
         </div>
 
         <div class="section">
@@ -278,7 +230,7 @@
           <div id="statusBox" class="status">Enter price + inputs, then calculate.</div>
 
           <div class="foot">
-            Calculation notes:
+            Notes:
             <ul>
               <li>Risk amount = Balance × Risk%</li>
               <li>Units sized so stop loss equals risk amount</li>
@@ -290,38 +242,14 @@
 
       <div class="results">
         <table>
-          <tr>
-            <td>Risk Amount (USD)</td>
-            <td class="right" id="riskAmtOut">—</td>
-          </tr>
-          <tr>
-            <td>Pip Size</td>
-            <td class="right" id="pipSizeOut">—</td>
-          </tr>
-          <tr>
-            <td>Pip Value per 1 Unit (USD)</td>
-            <td class="right" id="pipValOut">—</td>
-          </tr>
-          <tr>
-            <td>Position Size (Units)</td>
-            <td class="right" id="unitsOut">—</td>
-          </tr>
-          <tr>
-            <td>Lots (Std / Mini / Micro)</td>
-            <td class="right" id="lotsOut">—</td>
-          </tr>
-          <tr>
-            <td>Notional (USD)</td>
-            <td class="right" id="notionalOut">—</td>
-          </tr>
-          <tr>
-            <td>Margin Required (USD)</td>
-            <td class="right" id="marginOut">—</td>
-          </tr>
-          <tr>
-            <td>Max Units by Margin (at leverage)</td>
-            <td class="right" id="maxUnitsOut">—</td>
-          </tr>
+          <tr><td>Risk Amount (USD)</td><td class="right" id="riskAmtOut">—</td></tr>
+          <tr><td>Pip Size</td><td class="right" id="pipSizeOut">—</td></tr>
+          <tr><td>Pip Value per 1 Unit (USD)</td><td class="right" id="pipValOut">—</td></tr>
+          <tr><td>Position Size (Units)</td><td class="right" id="unitsOut">—</td></tr>
+          <tr><td>Lots (Std / Mini / Micro)</td><td class="right" id="lotsOut">—</td></tr>
+          <tr><td>Notional (USD)</td><td class="right" id="notionalOut">—</td></tr>
+          <tr><td>Margin Required (USD)</td><td class="right" id="marginOut">—</td></tr>
+          <tr><td>Max Units by Margin (at leverage)</td><td class="right" id="maxUnitsOut">—</td></tr>
         </table>
 
         <div class="foot" id="warnings"></div>
@@ -333,15 +261,28 @@
     const els = {
       pair: document.getElementById("pair"),
       price: document.getElementById("price"),
+
+      stopMode: document.getElementById("stopMode"),
+      rowStopPips: document.getElementById("rowStopPips"),
+      rowStopPrice: document.getElementById("rowStopPrice"),
+      stopPips: document.getElementById("stopPips"),
+      stopPrice: document.getElementById("stopPrice"),
+      stopPipsComputedA: document.getElementById("stopPipsComputedA"),
+      stopPipsComputedB: document.getElementById("stopPipsComputedB"),
+      stopPipsLive: document.getElementById("stopPipsLive"),
+
       balance: document.getElementById("balance"),
       riskPct: document.getElementById("riskPct"),
       leverage: document.getElementById("leverage"),
-      stopPips: document.getElementById("stopPips"),
+
       btnCalc: document.getElementById("btnCalc"),
       btnReset: document.getElementById("btnReset"),
+
       statusBox: document.getElementById("statusBox"),
+
       pairOut: document.getElementById("pairOut"),
       pipOut: document.getElementById("pipOut"),
+
       riskAmtOut: document.getElementById("riskAmtOut"),
       pipSizeOut: document.getElementById("pipSizeOut"),
       pipValOut: document.getElementById("pipValOut"),
@@ -361,22 +302,19 @@
       if (!isFinite(n)) return "—";
       return Number(n).toFixed(d);
     }
-
     function setStatus(msg, kind=""){
       els.statusBox.className = "status" + (kind ? " " + kind : "");
       els.statusBox.textContent = msg;
     }
 
-    function pipSizeForPair(pair){
-      return pair.endsWith("JPY") ? 0.01 : 0.0001;
-    }
+    function pipSizeForPair(pair){ return pair.endsWith("JPY") ? 0.01 : 0.0001; }
 
     // Assumes Account Currency = USD
     function notionalUSD(pair, units, price){
       const base = pair.slice(0,3);
       const quote = pair.slice(3,6);
       if (quote === "USD") return units * price; // EURUSD, GBPUSD, AUDUSD, NZDUSD
-      if (base === "USD") return units;         // USDJPY, USDCHF, USDCAD (units are USD)
+      if (base === "USD") return units;         // USDJPY, USDCHF, USDCAD
       return units * price;
     }
 
@@ -384,13 +322,8 @@
       const base = pair.slice(0,3);
       const quote = pair.slice(3,6);
       const pip = pipSizeForPair(pair);
-
-      // quote USD -> pip value per 1 unit is pip size in USD
       if (quote === "USD") return pip;
-
-      // base USD -> pip is in quote currency; convert to USD by dividing by price (USDXXX)
       if (base === "USD") return pip / price;
-
       return pip;
     }
 
@@ -401,11 +334,13 @@
       els.pipOut.textContent = pip.toString();
       els.pipSizeOut.textContent = pip.toString();
 
-      // tweak price step precision
+      // price input precision
       els.price.step = pair.endsWith("JPY") ? "0.001" : "0.00001";
-      els.price.placeholder = pair.endsWith("JPY")
-        ? "e.g., 156.320"
-        : "e.g., 1.08540";
+      els.price.placeholder = pair.endsWith("JPY") ? "e.g., 156.320" : "e.g., 1.08540";
+
+      // stop price step should match price step
+      els.stopPrice.step = els.price.step;
+      els.stopPrice.placeholder = pair.endsWith("JPY") ? "e.g., 156.220" : "e.g., 1.08440";
     }
 
     function resetOutputs(){
@@ -419,24 +354,65 @@
       els.warnings.innerHTML = "";
     }
 
+    function computeStopPips(){
+      const pair = els.pair.value;
+      const pipSize = pipSizeForPair(pair);
+
+      const entry = Number(els.price.value);
+      const mode = els.stopMode.value;
+
+      let stopPips = NaN;
+
+      if (mode === "pips") {
+        stopPips = Number(els.stopPips.value);
+      } else {
+        const stopPrice = Number(els.stopPrice.value);
+        if (entry > 0 && stopPrice > 0) {
+          stopPips = Math.abs(entry - stopPrice) / pipSize;
+        }
+      }
+
+      // Display computed
+      const display = isFinite(stopPips) && stopPips > 0 ? fmtFixed(stopPips, 1) : "—";
+      els.stopPipsComputedA.value = display;
+      els.stopPipsComputedB.value = display;
+      els.stopPipsLive.textContent = display;
+
+      return stopPips;
+    }
+
+    function syncStopModeUI(){
+      const mode = els.stopMode.value;
+      if (mode === "pips") {
+        els.rowStopPips.classList.remove("hide");
+        els.rowStopPrice.classList.add("hide");
+      } else {
+        els.rowStopPips.classList.add("hide");
+        els.rowStopPrice.classList.remove("hide");
+      }
+      computeStopPips();
+    }
+
     function calc(){
       const pair = els.pair.value;
-      const price = Number(els.price.value);
+      const price = Number(els.price.value); // entry price
       const balance = Number(els.balance.value);
       const riskPct = Number(els.riskPct.value);
       const leverage = Number(els.leverage.value);
-      const stopPips = Number(els.stopPips.value);
+      const stopPips = computeStopPips();
 
       resetOutputs();
 
-      if (!(price > 0)) { setStatus("Enter the current price for the selected pair.", "warn"); return; }
+      if (!(price > 0)) { setStatus("Enter the current price (entry price).", "warn"); return; }
       if (!(balance > 0)) { setStatus("Enter account balance.", "warn"); return; }
       if (!(riskPct > 0)) { setStatus("Enter risk % (e.g., 1).", "warn"); return; }
       if (!(leverage > 0)) { setStatus("Enter leverage (e.g., 30).", "warn"); return; }
-      if (!(stopPips > 0)) { setStatus("Enter stop-loss distance in pips.", "warn"); return; }
+      if (!(stopPips > 0) || !isFinite(stopPips)) {
+        setStatus("Enter a valid stop (either pips or stop price).", "warn");
+        return;
+      }
 
       const riskAmt = balance * (riskPct / 100);
-      const pipSize = pipSizeForPair(pair);
       const pipValUnit = pipValuePerUnitUSD(pair, price);
 
       // units so that: riskAmt = units * stopPips * pipValUnit
@@ -489,7 +465,20 @@
     els.pair.addEventListener("change", () => {
       updatePairMeta();
       resetOutputs();
+      computeStopPips();
       setStatus("Enter price + inputs, then calculate.", "");
+    });
+
+    els.stopMode.addEventListener("change", () => {
+      syncStopModeUI();
+      resetOutputs();
+      setStatus("Stop mode updated. Enter stop inputs, then calculate.", "");
+    });
+
+    ["input","change"].forEach(evt => {
+      els.price.addEventListener(evt, computeStopPips);
+      els.stopPips.addEventListener(evt, computeStopPips);
+      els.stopPrice.addEventListener(evt, computeStopPips);
     });
 
     els.btnCalc.addEventListener("click", calc);
@@ -500,12 +489,15 @@
       els.riskPct.value = "";
       els.leverage.value = "";
       els.stopPips.value = "";
+      els.stopPrice.value = "";
       resetOutputs();
+      computeStopPips();
       setStatus("Reset. Enter price + inputs, then calculate.", "");
     });
 
     // Init
     updatePairMeta();
+    syncStopModeUI();
     resetOutputs();
   </script>
 </body>
