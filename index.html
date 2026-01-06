@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>FX Risk Size Calculator (Majors)</title>
+  <title>FX Risk Size Calculator (Manual Price)</title>
   <style>
     :root{
       --bg:#0b0f17;
@@ -19,7 +19,7 @@
       --shadow: 0 18px 50px rgba(0,0,0,.35);
       --radius: 16px;
       --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
-      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
     }
     *{ box-sizing:border-box; }
     body{
@@ -129,10 +129,6 @@
       background: rgba(255,255,255,.06);
       font-weight: 600;
     }
-    button:disabled{
-      opacity:.55;
-      cursor:not-allowed;
-    }
     .pill{
       display:inline-flex;
       align-items:center;
@@ -216,15 +212,15 @@
   <div class="wrap">
     <header>
       <div>
-        <h1>FX Risk Size Calculator (Majors)</h1>
+        <h1>FX Risk Size Calculator (Manual Price)</h1>
         <p class="sub">
-          Select a major pair, fetch the latest available rate, then compute a position size based on account risk and stop distance.
+          Choose a major pair, manually enter the current price, then calculate position size from account risk and stop distance.
           Assumes <span class="mono">Account Currency = USD</span> and standard lot = <span class="mono">100,000</span> units.
         </p>
       </div>
       <div class="meta">
-        <span class="pill">Price: <strong id="priceOut">—</strong></span>
-        <span class="pill">As of: <strong id="asOfOut">—</strong></span>
+        <span class="pill">Pair: <strong id="pairOut">EURUSD</strong></span>
+        <span class="pill">Pip: <strong id="pipOut">0.0001</strong></span>
       </div>
     </header>
 
@@ -243,6 +239,9 @@
             <option value="AUDUSD">AUDUSD</option>
             <option value="NZDUSD">NZDUSD</option>
           </select>
+
+          <label for="price">Current Price (manual)</label>
+          <input id="price" type="number" min="0" step="0.00001" placeholder="e.g., 1.08540 (or 156.320 for JPY pairs)" />
 
           <div class="row">
             <div>
@@ -267,22 +266,22 @@
           </div>
 
           <div class="btnbar">
-            <button id="btnFetch">Fetch Current Price</button>
-            <button class="secondary" id="btnCalc">Calculate Risk Size</button>
+            <button id="btnCalc">Calculate Risk Size</button>
+            <button class="secondary" id="btnReset">Reset</button>
           </div>
 
-          <div class="small" id="fetchHint">Tip: price auto-fetches when you change the pair.</div>
+          <div class="small">Tip: For USDJPY, a 10 pip stop = 0.10 JPY (because pip size is 0.01).</div>
         </div>
 
         <div class="section">
           <h2>Status</h2>
-          <div id="statusBox" class="status">Select a pair and fetch price.</div>
+          <div id="statusBox" class="status">Enter price + inputs, then calculate.</div>
 
           <div class="foot">
             Calculation notes:
             <ul>
               <li>Risk amount = Balance × Risk%</li>
-              <li>Position size uses stop distance (pips). Without a stop, “risk size” cannot be computed.</li>
+              <li>Units sized so stop loss equals risk amount</li>
               <li>Margin required = Notional ÷ Leverage</li>
             </ul>
           </div>
@@ -320,7 +319,7 @@
             <td class="right" id="marginOut">—</td>
           </tr>
           <tr>
-            <td>Max Units by Margin (USD, at leverage)</td>
+            <td>Max Units by Margin (at leverage)</td>
             <td class="right" id="maxUnitsOut">—</td>
           </tr>
         </table>
@@ -331,31 +330,18 @@
   </div>
 
   <script>
-    // --- FX price fetch via exchangerate.host "latest?base=...&symbols=..." ---
-    // This returns an indicative latest rate, not broker tick data.
-    const API_BASE = "https://api.exchangerate.host/latest";
-
-    const pairMap = {
-      "EURUSD": { base: "EUR", quote: "USD" },
-      "GBPUSD": { base: "GBP", quote: "USD" },
-      "USDJPY": { base: "USD", quote: "JPY" },
-      "USDCHF": { base: "USD", quote: "CHF" },
-      "USDCAD": { base: "USD", quote: "CAD" },
-      "AUDUSD": { base: "AUD", quote: "USD" },
-      "NZDUSD": { base: "NZD", quote: "USD" }
-    };
-
     const els = {
       pair: document.getElementById("pair"),
+      price: document.getElementById("price"),
       balance: document.getElementById("balance"),
       riskPct: document.getElementById("riskPct"),
       leverage: document.getElementById("leverage"),
       stopPips: document.getElementById("stopPips"),
-      btnFetch: document.getElementById("btnFetch"),
       btnCalc: document.getElementById("btnCalc"),
+      btnReset: document.getElementById("btnReset"),
       statusBox: document.getElementById("statusBox"),
-      priceOut: document.getElementById("priceOut"),
-      asOfOut: document.getElementById("asOfOut"),
+      pairOut: document.getElementById("pairOut"),
+      pipOut: document.getElementById("pipOut"),
       riskAmtOut: document.getElementById("riskAmtOut"),
       pipSizeOut: document.getElementById("pipSizeOut"),
       pipValOut: document.getElementById("pipValOut"),
@@ -367,15 +353,11 @@
       warnings: document.getElementById("warnings"),
     };
 
-    let currentPrice = null;
-    let currentAsOf = null;
-
     function fmt(n, d=2){
       if (!isFinite(n)) return "—";
       return Number(n).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
     }
-
-    function fmtMono(n, d=2){
+    function fmtFixed(n, d=2){
       if (!isFinite(n)) return "—";
       return Number(n).toFixed(d);
     }
@@ -386,164 +368,145 @@
     }
 
     function pipSizeForPair(pair){
-      // JPY pairs use 0.01 pip size, others 0.0001
       return pair.endsWith("JPY") ? 0.01 : 0.0001;
     }
 
+    // Assumes Account Currency = USD
     function notionalUSD(pair, units, price){
-      // Assumes Account Currency = USD
-      // If quote is USD (EURUSD, GBPUSD, AUDUSD, NZDUSD): notional = units * price
-      // If base is USD (USDJPY, USDCHF, USDCAD): notional = units (since units are USD)
       const base = pair.slice(0,3);
       const quote = pair.slice(3,6);
-      if (quote === "USD") return units * price;
-      if (base === "USD") return units;
-      // Not used in this majors-only list
+      if (quote === "USD") return units * price; // EURUSD, GBPUSD, AUDUSD, NZDUSD
+      if (base === "USD") return units;         // USDJPY, USDCHF, USDCAD (units are USD)
       return units * price;
     }
 
     function pipValuePerUnitUSD(pair, price){
-      // Pip value per 1 unit of base currency, expressed in USD.
-      // quote USD: pip value per unit = pipSize USD
-      // base USD: pip value per unit = pipSize(quote) / price (convert quote -> USD)
       const base = pair.slice(0,3);
       const quote = pair.slice(3,6);
       const pip = pipSizeForPair(pair);
 
-      if (quote === "USD") return pip;            // e.g., EURUSD: 0.0001 USD per EUR unit per pip
-      if (base === "USD") return pip / price;     // e.g., USDJPY: 0.01 JPY per USD unit; convert to USD by / price
-      // Not used here
+      // quote USD -> pip value per 1 unit is pip size in USD
+      if (quote === "USD") return pip;
+
+      // base USD -> pip is in quote currency; convert to USD by dividing by price (USDXXX)
+      if (base === "USD") return pip / price;
+
       return pip;
     }
 
-    async function fetchPrice(){
+    function updatePairMeta(){
       const pair = els.pair.value;
-      const map = pairMap[pair];
-      if (!map) return;
+      const pip = pipSizeForPair(pair);
+      els.pairOut.textContent = pair;
+      els.pipOut.textContent = pip.toString();
+      els.pipSizeOut.textContent = pip.toString();
 
-      const url = `${API_BASE}?base=${encodeURIComponent(map.base)}&symbols=${encodeURIComponent(map.quote)}`;
+      // tweak price step precision
+      els.price.step = pair.endsWith("JPY") ? "0.001" : "0.00001";
+      els.price.placeholder = pair.endsWith("JPY")
+        ? "e.g., 156.320"
+        : "e.g., 1.08540";
+    }
 
-      els.btnFetch.disabled = true;
-      setStatus("Fetching price…", "");
-      els.warnings.textContent = "";
-
-      try{
-        const res = await fetch(url, { cache: "no-store" });
-        if(!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
-
-        // Typical shape: { base: "EUR", date: "2026-01-06", rates: { USD: 1.0... } }
-        const rate = data?.rates?.[map.quote];
-        const date = data?.date || "—";
-
-        if(!isFinite(rate)) throw new Error("No rate returned from API.");
-
-        currentPrice = Number(rate);
-        currentAsOf = date;
-
-        els.priceOut.textContent = fmtMono(currentPrice, pair.endsWith("JPY") ? 3 : 5);
-        els.asOfOut.textContent = currentAsOf;
-
-        setStatus(`Price loaded for ${pair}: ${els.priceOut.textContent}`, "ok");
-      }catch(err){
-        currentPrice = null;
-        currentAsOf = null;
-        els.priceOut.textContent = "—";
-        els.asOfOut.textContent = "—";
-        setStatus(`Could not fetch price. ${err.message}`, "bad");
-      }finally{
-        els.btnFetch.disabled = false;
-      }
+    function resetOutputs(){
+      els.riskAmtOut.textContent = "—";
+      els.pipValOut.textContent = "—";
+      els.unitsOut.textContent = "—";
+      els.lotsOut.textContent = "—";
+      els.notionalOut.textContent = "—";
+      els.marginOut.textContent = "—";
+      els.maxUnitsOut.textContent = "—";
+      els.warnings.innerHTML = "";
     }
 
     function calc(){
       const pair = els.pair.value;
-
+      const price = Number(els.price.value);
       const balance = Number(els.balance.value);
       const riskPct = Number(els.riskPct.value);
       const leverage = Number(els.leverage.value);
       const stopPips = Number(els.stopPips.value);
 
-      els.warnings.textContent = "";
+      resetOutputs();
 
-      if(!isFinite(currentPrice) || currentPrice <= 0){
-        setStatus("Fetch price first (or ensure the price loaded successfully).", "warn");
-        return;
-      }
-      if(!(balance > 0) || !(riskPct > 0) || !(leverage > 0) || !(stopPips > 0)){
-        setStatus("Enter Balance, Risk%, Leverage, and Stop-Loss (pips).", "warn");
-        return;
-      }
+      if (!(price > 0)) { setStatus("Enter the current price for the selected pair.", "warn"); return; }
+      if (!(balance > 0)) { setStatus("Enter account balance.", "warn"); return; }
+      if (!(riskPct > 0)) { setStatus("Enter risk % (e.g., 1).", "warn"); return; }
+      if (!(leverage > 0)) { setStatus("Enter leverage (e.g., 30).", "warn"); return; }
+      if (!(stopPips > 0)) { setStatus("Enter stop-loss distance in pips.", "warn"); return; }
 
       const riskAmt = balance * (riskPct / 100);
       const pipSize = pipSizeForPair(pair);
-      const pipValUnit = pipValuePerUnitUSD(pair, currentPrice);
+      const pipValUnit = pipValuePerUnitUSD(pair, price);
 
-      // Units sized to lose ~riskAmt if stopPips hit:
-      // riskAmt = units * stopPips * pipValUnit
+      // units so that: riskAmt = units * stopPips * pipValUnit
       const units = riskAmt / (stopPips * pipValUnit);
 
-      // Lots
       const stdLots = units / 100000;
       const miniLots = units / 10000;
       const microLots = units / 1000;
 
-      // Notional and margin
-      const notional = notionalUSD(pair, units, currentPrice);
+      const notional = notionalUSD(pair, units, price);
       const marginReq = notional / leverage;
 
-      // Max units by margin (if you used full margin capacity)
-      // Max notional = balance * leverage
-      // Convert to units based on pair:
+      // max units by margin (using full balance as margin)
       const base = pair.slice(0,3);
       const quote = pair.slice(3,6);
       let maxUnits;
       if (quote === "USD") {
-        maxUnits = (balance * leverage) / currentPrice;
+        maxUnits = (balance * leverage) / price;
       } else if (base === "USD") {
         maxUnits = balance * leverage;
       } else {
-        maxUnits = (balance * leverage) / currentPrice;
+        maxUnits = (balance * leverage) / price;
       }
 
-      // Output
       els.riskAmtOut.textContent = "$" + fmt(riskAmt, 2);
-      els.pipSizeOut.textContent = pipSizeForPair(pair).toString();
       els.pipValOut.textContent = "$" + fmt(pipValUnit, 6);
       els.unitsOut.textContent = fmt(units, 0);
-      els.lotsOut.textContent =
-        `${fmt(stdLots, 3)} / ${fmt(miniLots, 2)} / ${fmt(microLots, 1)}`;
+      els.lotsOut.textContent = `${fmt(stdLots, 3)} / ${fmt(miniLots, 2)} / ${fmt(microLots, 1)}`;
       els.notionalOut.textContent = "$" + fmt(notional, 2);
       els.marginOut.textContent = "$" + fmt(marginReq, 2);
       els.maxUnitsOut.textContent = fmt(maxUnits, 0);
 
-      // Warnings / flags
       const warnLines = [];
-      if (marginReq > balance){
-        warnLines.push(`Margin required ($${fmt(marginReq,2)}) exceeds account balance ($${fmt(balance,2)}). This position would be margin-constrained.`);
+      if (marginReq > balance) {
+        warnLines.push(`Margin required ($${fmt(marginReq,2)}) exceeds account balance ($${fmt(balance,2)}). You are margin-constrained.`);
       }
-      if (units > maxUnits){
-        warnLines.push(`Risk-based units (${fmt(units,0)}) exceed max units by margin (${fmt(maxUnits,0)}). You cannot take the full risk-based size at this leverage.`);
+      if (units > maxUnits) {
+        warnLines.push(`Risk-based units (${fmt(units,0)}) exceed max units by margin (${fmt(maxUnits,0)}). Lower risk %, increase leverage, or use a tighter stop.`);
       }
 
-      if (warnLines.length){
+      if (warnLines.length) {
         setStatus("Calculated (with constraints). Review warnings.", "warn");
         els.warnings.innerHTML = `<div class="status warn">${warnLines.map(x => "• " + x).join("<br>")}</div>`;
       } else {
         setStatus("Calculated successfully.", "ok");
-        els.warnings.innerHTML = "";
       }
     }
 
-    // Wire up UI
-    els.btnFetch.addEventListener("click", fetchPrice);
-    els.btnCalc.addEventListener("click", calc);
+    // Events
     els.pair.addEventListener("change", () => {
-      fetchPrice();
+      updatePairMeta();
+      resetOutputs();
+      setStatus("Enter price + inputs, then calculate.", "");
     });
 
-    // Initial fetch on load
-    fetchPrice();
+    els.btnCalc.addEventListener("click", calc);
+
+    els.btnReset.addEventListener("click", () => {
+      els.price.value = "";
+      els.balance.value = "";
+      els.riskPct.value = "";
+      els.leverage.value = "";
+      els.stopPips.value = "";
+      resetOutputs();
+      setStatus("Reset. Enter price + inputs, then calculate.", "");
+    });
+
+    // Init
+    updatePairMeta();
+    resetOutputs();
   </script>
 </body>
 </html>
