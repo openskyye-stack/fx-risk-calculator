@@ -121,7 +121,7 @@
       vertical-align: top;
     }
     tr:last-child td{ border-bottom:none; }
-    td:first-child{ color: var(--muted); width: 42%; }
+    td:first-child{ color: var(--muted); width: 52%; }
     .right{ text-align:right; font-family: var(--mono); }
     .foot{ margin-top: 10px; color: var(--muted); font-size: 12px; line-height: 1.35; }
     .small{ font-size: 12px; color: var(--muted); margin-top: 6px; }
@@ -135,13 +135,13 @@
       <div>
         <h1>FX Risk Size Calculator (Manual Price)</h1>
         <p class="sub">
-          Choose a major pair, manually enter the current price, then calculate position size from account risk and stop distance.
-          Assumes <span class="mono">Account Currency = USD</span> and standard lot = <span class="mono">100,000</span> units.
+          Manual price. Outputs a single recommended position size (units) based on risk and leverage/margin constraints.
+          Assumes <span class="mono">Account Currency = USD</span>.
         </p>
       </div>
       <div class="meta">
         <span class="pill">Pair: <strong id="pairOut">EURUSD</strong></span>
-        <span class="pill">Pip: <strong id="pipOut">0.0001</strong></span>
+        <span class="pill">Pip Size: <strong id="pipOut">0.0001</strong></span>
         <span class="pill">Stop (pips): <strong id="stopPipsLive">—</strong></span>
       </div>
     </header>
@@ -162,10 +162,10 @@
             <option value="NZDUSD">NZDUSD</option>
           </select>
 
-          <label for="price">Current Price (Entry Price)</label>
+          <label for="price">Current Price (Entry)</label>
           <input id="price" type="number" min="0" step="0.00001" placeholder="e.g., 1.08540 (or 156.320 for JPY pairs)" />
 
-          <label for="stopMode">Stop Loss Input Mode</label>
+          <label for="stopMode">Stop Input Mode</label>
           <select id="stopMode">
             <option value="pips">Stop in pips</option>
             <option value="price">Stop at a specific price</option>
@@ -216,42 +216,33 @@
           </div>
 
           <div class="btnbar">
-            <button id="btnCalc">Calculate Risk Size</button>
+            <button id="btnCalc">Calculate</button>
             <button class="secondary" id="btnReset">Reset</button>
           </div>
 
           <div class="small">
-            If you choose “Stop at price,” the calculator uses: <span class="mono">abs(entry - stop) ÷ pipSize</span>.
+            Note: EURUSD pip size is always <span class="mono">0.0001</span>. It only changes for JPY pairs.
           </div>
         </div>
 
         <div class="section">
           <h2>Status</h2>
           <div id="statusBox" class="status">Enter price + inputs, then calculate.</div>
-
-          <div class="foot">
-            Notes:
-            <ul>
-              <li>Risk amount = Balance × Risk%</li>
-              <li>Units sized so stop loss equals risk amount</li>
-              <li>Margin required = Notional ÷ Leverage</li>
-            </ul>
-          </div>
+          <div class="foot" id="modeNote"></div>
         </div>
       </div>
 
       <div class="results">
         <table>
+          <tr><td><strong>Recommended Position Size (Units)</strong></td><td class="right" id="recUnitsOut">—</td></tr>
           <tr><td>Risk Amount (USD)</td><td class="right" id="riskAmtOut">—</td></tr>
+          <tr><td>Stop Distance (pips)</td><td class="right" id="stopOut">—</td></tr>
           <tr><td>Pip Size</td><td class="right" id="pipSizeOut">—</td></tr>
           <tr><td>Pip Value per 1 Unit (USD)</td><td class="right" id="pipValOut">—</td></tr>
-          <tr><td>Position Size (Units)</td><td class="right" id="unitsOut">—</td></tr>
-          <tr><td>Lots (Std / Mini / Micro)</td><td class="right" id="lotsOut">—</td></tr>
-          <tr><td>Notional (USD)</td><td class="right" id="notionalOut">—</td></tr>
-          <tr><td>Margin Required (USD)</td><td class="right" id="marginOut">—</td></tr>
-          <tr><td>Max Units by Margin (at leverage)</td><td class="right" id="maxUnitsOut">—</td></tr>
+          <tr><td>Risk-based Units</td><td class="right" id="riskUnitsOut">—</td></tr>
+          <tr><td>Max Units Allowed by Leverage</td><td class="right" id="maxUnitsOut">—</td></tr>
+          <tr><td>Margin Required (USD) for Recommended Size</td><td class="right" id="marginOut">—</td></tr>
         </table>
-
         <div class="foot" id="warnings"></div>
       </div>
     </div>
@@ -279,18 +270,19 @@
       btnReset: document.getElementById("btnReset"),
 
       statusBox: document.getElementById("statusBox"),
+      modeNote: document.getElementById("modeNote"),
 
       pairOut: document.getElementById("pairOut"),
       pipOut: document.getElementById("pipOut"),
 
+      recUnitsOut: document.getElementById("recUnitsOut"),
       riskAmtOut: document.getElementById("riskAmtOut"),
+      stopOut: document.getElementById("stopOut"),
       pipSizeOut: document.getElementById("pipSizeOut"),
       pipValOut: document.getElementById("pipValOut"),
-      unitsOut: document.getElementById("unitsOut"),
-      lotsOut: document.getElementById("lotsOut"),
-      notionalOut: document.getElementById("notionalOut"),
-      marginOut: document.getElementById("marginOut"),
+      riskUnitsOut: document.getElementById("riskUnitsOut"),
       maxUnitsOut: document.getElementById("maxUnitsOut"),
+      marginOut: document.getElementById("marginOut"),
       warnings: document.getElementById("warnings"),
     };
 
@@ -298,7 +290,7 @@
       if (!isFinite(n)) return "—";
       return Number(n).toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
     }
-    function fmtFixed(n, d=2){
+    function fmtFixed(n, d=1){
       if (!isFinite(n)) return "—";
       return Number(n).toFixed(d);
     }
@@ -309,22 +301,45 @@
 
     function pipSizeForPair(pair){ return pair.endsWith("JPY") ? 0.01 : 0.0001; }
 
-    // Assumes Account Currency = USD
-    function notionalUSD(pair, units, price){
-      const base = pair.slice(0,3);
-      const quote = pair.slice(3,6);
-      if (quote === "USD") return units * price; // EURUSD, GBPUSD, AUDUSD, NZDUSD
-      if (base === "USD") return units;         // USDJPY, USDCHF, USDCAD
-      return units * price;
-    }
-
+    // Account Currency = USD
     function pipValuePerUnitUSD(pair, price){
       const base = pair.slice(0,3);
       const quote = pair.slice(3,6);
       const pip = pipSizeForPair(pair);
+
+      // Quote USD -> pip value per 1 unit is pip size in USD
       if (quote === "USD") return pip;
+
+      // Base USD -> pip is in quote currency; convert to USD by dividing by price (USDXXX)
       if (base === "USD") return pip / price;
-      return pip;
+
+      return pip; // not used here
+    }
+
+    function notionalUSD(pair, units, price){
+      const base = pair.slice(0,3);
+      const quote = pair.slice(3,6);
+
+      // Quote USD pairs -> units * price
+      if (quote === "USD") return units * price;
+
+      // Base USD pairs -> units are USD
+      if (base === "USD") return units;
+
+      return units * price;
+    }
+
+    function resetOutputs(){
+      els.recUnitsOut.textContent = "—";
+      els.riskAmtOut.textContent = "—";
+      els.stopOut.textContent = "—";
+      els.pipSizeOut.textContent = "—";
+      els.pipValOut.textContent = "—";
+      els.riskUnitsOut.textContent = "—";
+      els.maxUnitsOut.textContent = "—";
+      els.marginOut.textContent = "—";
+      els.warnings.innerHTML = "";
+      els.modeNote.textContent = "";
     }
 
     function updatePairMeta(){
@@ -334,24 +349,11 @@
       els.pipOut.textContent = pip.toString();
       els.pipSizeOut.textContent = pip.toString();
 
-      // price input precision
       els.price.step = pair.endsWith("JPY") ? "0.001" : "0.00001";
       els.price.placeholder = pair.endsWith("JPY") ? "e.g., 156.320" : "e.g., 1.08540";
 
-      // stop price step should match price step
       els.stopPrice.step = els.price.step;
       els.stopPrice.placeholder = pair.endsWith("JPY") ? "e.g., 156.220" : "e.g., 1.08440";
-    }
-
-    function resetOutputs(){
-      els.riskAmtOut.textContent = "—";
-      els.pipValOut.textContent = "—";
-      els.unitsOut.textContent = "—";
-      els.lotsOut.textContent = "—";
-      els.notionalOut.textContent = "—";
-      els.marginOut.textContent = "—";
-      els.maxUnitsOut.textContent = "—";
-      els.warnings.innerHTML = "";
     }
 
     function computeStopPips(){
@@ -372,8 +374,7 @@
         }
       }
 
-      // Display computed
-      const display = isFinite(stopPips) && stopPips > 0 ? fmtFixed(stopPips, 1) : "—";
+      const display = (isFinite(stopPips) && stopPips > 0) ? fmtFixed(stopPips, 1) : "—";
       els.stopPipsComputedA.value = display;
       els.stopPipsComputedB.value = display;
       els.stopPipsLive.textContent = display;
@@ -395,7 +396,7 @@
 
     function calc(){
       const pair = els.pair.value;
-      const price = Number(els.price.value); // entry price
+      const price = Number(els.price.value);
       const balance = Number(els.balance.value);
       const riskPct = Number(els.riskPct.value);
       const leverage = Number(els.leverage.value);
@@ -403,29 +404,21 @@
 
       resetOutputs();
 
-      if (!(price > 0)) { setStatus("Enter the current price (entry price).", "warn"); return; }
+      if (!(price > 0)) { setStatus("Enter current price (entry).", "warn"); return; }
       if (!(balance > 0)) { setStatus("Enter account balance.", "warn"); return; }
-      if (!(riskPct > 0)) { setStatus("Enter risk % (e.g., 1).", "warn"); return; }
-      if (!(leverage > 0)) { setStatus("Enter leverage (e.g., 30).", "warn"); return; }
-      if (!(stopPips > 0) || !isFinite(stopPips)) {
-        setStatus("Enter a valid stop (either pips or stop price).", "warn");
-        return;
-      }
+      if (!(riskPct > 0)) { setStatus("Enter risk %.", "warn"); return; }
+      if (!(leverage > 0)) { setStatus("Enter leverage.", "warn"); return; }
+      if (!(stopPips > 0) || !isFinite(stopPips)) { setStatus("Enter a valid stop (pips or stop price).", "warn"); return; }
 
-      const riskAmt = balance * (riskPct / 100);
+      const pipSize = pipSizeForPair(pair);
       const pipValUnit = pipValuePerUnitUSD(pair, price);
 
-      // units so that: riskAmt = units * stopPips * pipValUnit
-      const units = riskAmt / (stopPips * pipValUnit);
+      const riskAmt = balance * (riskPct / 100);
 
-      const stdLots = units / 100000;
-      const miniLots = units / 10000;
-      const microLots = units / 1000;
+      // Risk-based units
+      const riskUnits = riskAmt / (stopPips * pipValUnit);
 
-      const notional = notionalUSD(pair, units, price);
-      const marginReq = notional / leverage;
-
-      // max units by margin (using full balance as margin)
+      // Max units by leverage (uses full balance as margin capacity)
       const base = pair.slice(0,3);
       const quote = pair.slice(3,6);
       let maxUnits;
@@ -437,27 +430,31 @@
         maxUnits = (balance * leverage) / price;
       }
 
+      // Recommended = smaller of risk-based vs margin-allowed
+      const recUnits = Math.min(riskUnits, maxUnits);
+
+      // Margin required for recommended size
+      const notional = notionalUSD(pair, recUnits, price);
+      const marginReq = notional / leverage;
+
+      // Output
+      els.recUnitsOut.textContent = fmt(recUnits, 0);
       els.riskAmtOut.textContent = "$" + fmt(riskAmt, 2);
+      els.stopOut.textContent = fmtFixed(stopPips, 1);
+      els.pipSizeOut.textContent = pipSize.toString();
       els.pipValOut.textContent = "$" + fmt(pipValUnit, 6);
-      els.unitsOut.textContent = fmt(units, 0);
-      els.lotsOut.textContent = `${fmt(stdLots, 3)} / ${fmt(miniLots, 2)} / ${fmt(microLots, 1)}`;
-      els.notionalOut.textContent = "$" + fmt(notional, 2);
-      els.marginOut.textContent = "$" + fmt(marginReq, 2);
+      els.riskUnitsOut.textContent = fmt(riskUnits, 0);
       els.maxUnitsOut.textContent = fmt(maxUnits, 0);
+      els.marginOut.textContent = "$" + fmt(marginReq, 2);
 
-      const warnLines = [];
-      if (marginReq > balance) {
-        warnLines.push(`Margin required ($${fmt(marginReq,2)}) exceeds account balance ($${fmt(balance,2)}). You are margin-constrained.`);
-      }
-      if (units > maxUnits) {
-        warnLines.push(`Risk-based units (${fmt(units,0)}) exceed max units by margin (${fmt(maxUnits,0)}). Lower risk %, increase leverage, or use a tighter stop.`);
-      }
+      const isMarginLimited = recUnits < riskUnits - 1e-6;
 
-      if (warnLines.length) {
-        setStatus("Calculated (with constraints). Review warnings.", "warn");
-        els.warnings.innerHTML = `<div class="status warn">${warnLines.map(x => "• " + x).join("<br>")}</div>`;
+      if (isMarginLimited) {
+        setStatus("Calculated: margin-limited (leverage constraint).", "warn");
+        els.modeNote.textContent = "Recommended size was capped by leverage/margin. Increase leverage, reduce risk, or tighten stop to align risk size with margin limits.";
       } else {
-        setStatus("Calculated successfully.", "ok");
+        setStatus("Calculated: risk-limited (your risk settings).", "ok");
+        els.modeNote.textContent = "Recommended size is determined by your risk% and stop distance.";
       }
     }
 
@@ -472,7 +469,7 @@
     els.stopMode.addEventListener("change", () => {
       syncStopModeUI();
       resetOutputs();
-      setStatus("Stop mode updated. Enter stop inputs, then calculate.", "");
+      setStatus("Stop mode updated.", "");
     });
 
     ["input","change"].forEach(evt => {
@@ -492,7 +489,7 @@
       els.stopPrice.value = "";
       resetOutputs();
       computeStopPips();
-      setStatus("Reset. Enter price + inputs, then calculate.", "");
+      setStatus("Reset.", "");
     });
 
     // Init
